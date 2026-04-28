@@ -1,5 +1,6 @@
 SELECT *
-FROM title_emps;
+FROM title_emps
+ORDER BY title_code;
 
 SELECT 
 emp_id
@@ -10,7 +11,7 @@ SELECT
 emp_id
 FROM salaries
 WHERE salary BETWEEN 60000000 AND 70000000 
-AND end_at IS null
+AND end_at IS NULL
 ;
 
 SELECT
@@ -26,9 +27,9 @@ WHERE title LIKE '%사%'
 ;
 
 SELECT 
-`name`
+*
 FROM employees
-ORDER BY `name`
+ORDER BY `name`,birth
 ;
 
 SELECT 
@@ -41,7 +42,7 @@ ORDER BY AVG(salary)
 
 SELECT
 emp_id
-,TRUNCATE(AVG(salary),0)
+,TRUNCATE(AVG(salary),0) avg_sal
 FROM salaries
 GROUP BY emp_id
 HAVING AVG(salary) BETWEEN 30000000 AND 50000000
