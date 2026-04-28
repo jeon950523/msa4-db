@@ -59,9 +59,32 @@ FROM employees emp
 	JOIN salaries sal
 	ON emp.emp_id = sal.emp_id
 	AND sal.end_at IS NULL
+	AND emp.fire_at IS NULL
 ORDER BY sal.salary DESC
 LIMIT 10
 ;
+-- 속도개선 서브쿼리 사용 --
+SELECT
+emp.emp_id
+,emp.`name`
+,tmp_sal.salary
+FROM employees emp
+	JOIN (
+		SELECT 
+		sal.emp_id
+		,sal.salary
+		FROM salaries sal
+		WHERE 
+			sal.end_at IS NULL
+		ORDER BY sal.salary DESC 
+		LIMIT 10
+	) tmp_sal
+	ON emp.emp_id = tmp_sal.emp_id
+		AND emp.fire_at IS NULL
+ORDER BY tmp_sal.salary DESC
+;
+
+
 -- 6. 현재 각 부서의 부서장의 부서명, 이름, 입사일을 출력해 주세요.
 SELECT
 dep.dept_name
@@ -71,8 +94,10 @@ FROM employees emp
 	JOIN department_managers demg
 	ON emp.emp_id = demg.emp_id
 		AND end_at IS NULL 
+		AND emp.fire_at IS NULL
 	JOIN departments dep
 	ON demg.dept_code = dep.dept_code
+	AND dep.end_at IS NULL
 ;
 
 
@@ -81,10 +106,7 @@ FROM employees emp
 SELECT 
 emp.`name`
 ,tl.title
-,TRUNCATE((SELECT salary
-	FROM salaries sal
-	WHERE sal.emp_id = emp.emp_id AND),0)
-	AS ps_salary		
+,avg(sal.salary) ps_salary		
 ,(SELECT TRUNCATE(AVG(s2.salary) ,0)
 	FROM salaries s2
 	JOIN title_emps t2
@@ -101,24 +123,44 @@ FROM employees emp
 		ON tle.title_code = tl.title_code
 	JOIN salaries sal
 		 ON tle.emp_id = sal.emp_id		 
-			AND sal.end_at IS NULL
 	WHERE tle.title_code = 'T005'
+	GROUP BY emp.emp_id, emp.`name`
 ;	
-	
+
+SELECT
+	tie.emp_id
+	,AVG(sal.salary) asv_sal
+FROM title_emps tie
+	JOIN titles tit
+		ON tie.title_code = tit.title_code
+			AND tit.title = '부장'
+			AND tie.end_at IS NULL
+	JOIN salaries sal
+		ON	sal.emp_id = tie.emp_id
+GROUP BY tie.emp_id
+;
 -- 8. 부서장직을 역임했던 모든 사원의 이름과 입사일, 사번, 부서번호를 출력해 주세요.
 SELECT 
 emp.`name`
 ,emp.hire_at
 ,emp.emp_id
-,dep.dept_code
+,damg.dept_code
 FROM employees emp
 JOIN department_managers damg
 	ON emp.emp_id = damg.emp_id
-JOIN departments dep
-	ON damg.dept_code = dep.dept_code
+
 ;
 
-
+SELECT 
+emp.`name`
+,emp.hire_at
+,emp.emp_id
+,depm.dept_code
+FROM department_managers depm
+	JOIN employees emp
+		ON depm.emp_id = emp.emp_id
+ORDER BY depm.dept_code, depm.start_at
+;	
 -- 9. 현재 각 직급별 평균연봉 중 60,000,000이상인 직급의 직급명, 평균연봉(정수)를을 평균연봉 내림차순으로 출력해 주세요.
 SELECT 
 tl.title
@@ -132,7 +174,23 @@ FROM title_emps tlem
 		AND sal.end_at IS NULL 
 GROUP BY tl.title
 HAVING AVG(sal.salary) >= 60000000
+ORDER BY AVG(sal.salary)
 ;
+
+SELECT
+	tit.title
+	,floor(AVG(sal.salary))
+FROM title_emps tie
+	JOIN salaries sal
+		ON tie.emp_id = sal.emp_id
+			AND tie.end_at IS NULL 
+			AND sal.end_at IS NULL
+	JOIN titles tit
+		ON tie.title_code = tit.title_code
+GROUP BY tie.title_code, tit.title
+	HAVING AVG(sal.salary) >= 60000000
+ORDER BY AVG(sal.salary) DESC
+;			 
 
 
 -- 10. 성별이 여자인 사원들의 직급별 사원수를 출력해 주세요.
@@ -150,6 +208,21 @@ AND tiem.end_at IS NULL
 GROUP BY tl.title
 ORDER BY COUNT(emp.emp_id)
 ;
+
+SELECT
+tie.title_code
+,emp.gender
+,COUNT(*)
+FROM employees emp
+	JOIN title_emps tie
+		ON emp.emp_id = tie.emp_id
+			AND emp.fire_at IS NULL
+			AND tie.end_at IS NULL
+			-- AND emp.gender = 'F'
+GROUP BY tie.title_code, emp.gender
+ORDER BY tie.title_code
+;
+
 
 SELECT 
 tl.title '직급'
